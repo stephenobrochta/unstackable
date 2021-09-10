@@ -1,4 +1,4 @@
-function [udoutput, shadingmat, sarsummarymat, sarshadingmat] = undatable(inputfile,nsim,xfactor,bootpc,varargin)
+function [udoutput, shadingmat, sarsummarymat, sarshadingmat] = unstackable(inputfile,nsim,xfactor,bootpc,varargin)
 % [udoutput, shadingmat, sarsummarymat, sarshadingmat] = undatable(inputfile,nsim,xfactor,bootpc)
 %
 % "Undatable" age-depth modelling software.
@@ -67,7 +67,7 @@ function [udoutput, shadingmat, sarsummarymat, sarshadingmat] = undatable(inputf
 % nsim is the number of monte carlo iterations. This matrix
 % is usually discarded after calculating summary statistics because
 % its size can cause memory errors if retained. This is not yet
-% available in GUI mode. The save operation occurrs in udsummary.mat.
+% available in GUI mode. The save operation occurrs in ussummary.mat.
 % If savebigmat = 1, savemat is also set to 1;
 % 1 = Yes, 0 = No. (e.g.: 'savemat',1 ) default = 0.
 % 
@@ -125,35 +125,21 @@ defaultrun1nsim = 2000;
 defaultsar = 0;
 defaultvcloud = 0;
 defaultplotsar = 0;
-if datenum(version('-date')) > datenum('May 19, 2013')
-	addParameter(p,'combine',defaultcombine,@isnumeric);
-	addParameter(p,'plotme',defaultplotme,@isnumeric);
-	addParameter(p,'printme',defaultprintme,@isnumeric);
-	addParameter(p,'savemat',defaultsavemat,@isnumeric);
-	addParameter(p,'savebigmat',defaultsavebigmat,@isnumeric);
-	addParameter(p,'debug',defaultdebug,@isnumeric);
-	addParameter(p,'writedir',defaultwritedir,@isstr);
-	addParameter(p,'guimode',defaultguimode,@isnumeric);
-	addParameter(p,'allowreversal',defaultallowreversal,@isnumeric);
-	addParameter(p,'run1nsim',defaultrun1nsim,@isnumeric);
-	addParameter(p,'sar',defaultsar,@isnumeric);
-	addParameter(p,'vcloud',defaultvcloud,@isnumeric);
-	addParameter(p,'plotsar',defaultplotsar,@isnumeric);
-else
-	addParamValue(p,'combine',defaultcombine,@isnumeric);
-	addParamValue(p,'plotme',defaultplotme,@isnumeric);
-	addParamValue(p,'printme',defaultprintme,@isnumeric);
-	addParamValue(p,'savemat',defaultsavemat,@isnumeric);
-	addParamValue(p,'savebigmat',defaultsavebigmat,@isnumeric);
-	addParamValue(p,'debug',defaultdebug,@isnumeric);
-	addParamValue(p,'writedir',defaultwritedir,@isstr);
-	addParamValue(p,'guimode',defaultguimode,@isnumeric);
-	addParamValue(p,'allowreversal',defaultallowreversal,@isnumeric);
-	addParamValue(p,'run1nsim',defaultrun1nsim,@isnumeric);
-	addParamValue(p,'sar',defaultsar,@isnumeric);
-	addParamValue(p,'vcloud',defaultvcloud,@isnumeric);
-	addParamValue(p,'plotsar',defaultplotsar,@isnumeric);
-end
+
+addParameter(p,'combine',defaultcombine,@isnumeric);
+addParameter(p,'plotme',defaultplotme,@isnumeric);
+addParameter(p,'printme',defaultprintme,@isnumeric);
+addParameter(p,'savemat',defaultsavemat,@isnumeric);
+addParameter(p,'savebigmat',defaultsavebigmat,@isnumeric);
+addParameter(p,'debug',defaultdebug,@isnumeric);
+addParameter(p,'writedir',defaultwritedir,@isstr);
+addParameter(p,'guimode',defaultguimode,@isnumeric);
+addParameter(p,'allowreversal',defaultallowreversal,@isnumeric);
+addParameter(p,'run1nsim',defaultrun1nsim,@isnumeric);
+addParameter(p,'sar',defaultsar,@isnumeric);
+addParameter(p,'vcloud',defaultvcloud,@isnumeric);
+addParameter(p,'plotsar',defaultplotsar,@isnumeric);
+
 parse(p,varargin{:});
 depthcombine=p.Results.combine;
 plotme = p.Results.plotme;
@@ -184,10 +170,10 @@ elseif bootpc >= 100
 end
 
 %---GET AND SORT INPUT DATA
-[datelabel, depth1, depth2, depth, age, ageerr, datetype, calcurve, resage, reserr, dateboot] = udgetdata(inputfile);
+[datelabel, depth1, depth2, depth, age, ageerr, datetype, calcurve, resage, reserr, dateboot] = usgetdata(inputfile);
 
 %---MAKE AGE AND DEPTH PDFs
-[medians, p68_2, p95_4, probtoplot, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, udrunshuffle] = udmakepdfs(depth, depth1, depth2, age, ageerr, calcurve, resage, reserr, dateboot, depthcombine);
+[medians, p68_2, p95_4, probtoplot, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle] = usmakepdfs(depth, depth1, depth2, age, ageerr, calcurve, resage, reserr, dateboot, depthcombine);
 
 %---RUN THE AGE DEPTH LOOPS
 if mean(depth2 - depth1) ~= 0
@@ -199,24 +185,24 @@ else
 end
 
 % run age depth loop for the first time (without anchors)
-agedepmat = udrun(run1nsim, bootpc, xfactor, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, udrunshuffle, allowreversal);
+agedepmat = usrun(run1nsim, bootpc, xfactor, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle, allowreversal);
 
 % summarise the data
 interpinterval = 1;
 depthstart = depth(1);
 depthend = depth(end);
-[summarymat, shadingmat, depthrange, sarsummarymat, sarshadingmat] = udsummary(depthstart, depthend, run1nsim, agedepmat, interpinterval, inputfile, writedir, bootpc, xfactor, depthcombine, sar, savebigmat);
+[summarymat, shadingmat, depthrange, sarsummarymat, sarshadingmat] = ussummary(depthstart, depthend, run1nsim, agedepmat, interpinterval, inputfile, writedir, bootpc, xfactor, depthcombine, sar, savebigmat);
 
 if mean(depth2 - depth1) ~= 0
 	
 	% make anchors based on first run
-	[rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth] = udanchors(depthrange, depth, depth1, depth2, summarymat, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot);
+	[rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth] = usanchors(depthrange, depth, depth1, depth2, summarymat, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot);
 	
 	% run age depth loop for the second time with anchors
-	agedepmat = udrun(nsim, bootpc, xfactor, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, udrunshuffle, allowreversal);
+	agedepmat = usrun(nsim, bootpc, xfactor, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle, allowreversal);
 	
 	% summarise the data
-	[summarymat, shadingmat, depthrange, sarsummarymat, sarshadingmat] = udsummary(depthstart, depthend, nsim, agedepmat, interpinterval, inputfile, writedir, bootpc, xfactor, depthcombine, sar, savebigmat);
+	[summarymat, shadingmat, depthrange, sarsummarymat, sarshadingmat] = ussummary(depthstart, depthend, nsim, agedepmat, interpinterval, inputfile, writedir, bootpc, xfactor, depthcombine, sar, savebigmat);
 end
 
 if sum(isnan(agedepmat(:,1,:))) == numel(agedepmat(:,1,:))

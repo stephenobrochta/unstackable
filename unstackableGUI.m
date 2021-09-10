@@ -1,4 +1,4 @@
-function varargout = undatableGUI(varargin)
+function varargout = unstackableGUI(varargin)
 % UNDATABLEGUI MATLAB code for undatableGUI.fig
 %      UNDATABLEGUI, by itself, creates a new UNDATABLEGUI or raises the existing
 %      singleton*.
@@ -90,7 +90,7 @@ if udinputfile == 0
 	return
 end
 save([udinstallpath,'/guitemp/filename.mat'], 'udinputfile', 'udinputpath');
-[tabdatelabel, tabdepth1, tabdepth2, tabdepth, tabage, tabageerr, tabdatetype, tabcalcurve, tabresage, tabreserr, tabdateboot] = udgetdata([udinputpath,udinputfile]);
+[tabdatelabel, tabdepth1, tabdepth2, tabdepth, tabage, tabageerr, tabdatetype, tabcalcurve, tabresage, tabreserr, tabdateboot] = usgetdata([udinputpath,udinputfile]);
 
 tabdatetype = lower(tabdatetype);
 tabcalcurve = lower(tabcalcurve);
