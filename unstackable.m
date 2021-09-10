@@ -233,7 +233,7 @@ end
 
 %---PLOT STUFF
 if plotme == 1
-	udplot
+	usplot
 end
 
 end % end function
