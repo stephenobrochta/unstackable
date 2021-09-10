@@ -120,11 +120,13 @@ defaultsavebigmat = 0;
 defaultdebug = 0;
 defaultwritedir = '';
 defaultguimode = 0;
-defaultallowreversal = 0;
+defaultallowreversal = 1;
 defaultrun1nsim = 2000;
 defaultsar = 0;
 defaultvcloud = 0;
 defaultplotsar = 0;
+defaultdt = [];
+[defaultminproxy,defaultmaxproxy] = deal([]);
 
 addParameter(p,'combine',defaultcombine,@isnumeric);
 addParameter(p,'plotme',defaultplotme,@isnumeric);
@@ -139,6 +141,9 @@ addParameter(p,'run1nsim',defaultrun1nsim,@isnumeric);
 addParameter(p,'sar',defaultsar,@isnumeric);
 addParameter(p,'vcloud',defaultvcloud,@isnumeric);
 addParameter(p,'plotsar',defaultplotsar,@isnumeric);
+addParameter(p,'dt',defaultdt,@isnumeric);
+addParameter(p,'minproxy',defaultminproxy,@isnumeric);
+addParameter(p,'maxproxy',defaultmaxproxy,@isnumeric);
 
 parse(p,varargin{:});
 depthcombine=p.Results.combine;
@@ -154,6 +159,9 @@ run1nsim = p.Results.run1nsim;
 sar = p.Results.sar;
 vcloud = p.Results.vcloud;
 plotsar = p.Results.plotsar;
+dt = p.Results.dt;
+minproxy = p.Results.minproxy;
+maxproxy = p.Results.maxproxy;
 
 % append / to writedir in case user forgot
 if isempty(writedir) == 0
