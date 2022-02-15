@@ -48,7 +48,7 @@ if exist('checkmex','var') == 1
 	end
 end
 
-percent and per gram can't be <0
+% percent and per gram can't be <0
 if contains(proxy,'PER') || contains(proxy,'PGR')
 	index = tempage < 0;
 	tempage(index) = 0;
