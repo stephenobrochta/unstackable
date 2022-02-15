@@ -49,10 +49,10 @@ if exist('checkmex','var') == 1
 end
 
 % percent and per gram can't be <0
-if contains(proxy,'PER') || contains(proxy,'PGR')
-	index = tempage < 0;
-	tempage(index) = 0;
-end
+% if contains(proxy,'PER') || contains(proxy,'PGR')
+% 	index = tempage < 0;
+% 	tempage(index) = 0;
+% end
 
 % create probability density cloud for ages
 allprctiles = prctile(tempage,[1:99, 100*(1-erf(2/sqrt(2)))/2, 100*(1-erf(1/sqrt(2)))/2, 100-100*(1-erf(1/sqrt(2)))/2, 100-100*(1-erf(2/sqrt(2)))/2] , 2);
