@@ -1,4 +1,4 @@
-function [rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth] = usanchors(depthrange, depth, depth1, depth2, summarymat, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot)
+function [rundepth, rundepthpdf, runprob2sig, runboot, runncaldepth] = usanchors(depthrange, summarymat, rundepth, rundepthpdf, runprob2sig, runboot)
 
 % calculate bottom anchor
 P = polyfit(  depthrange(depthrange <= rundepth(end) & depthrange >= rundepth(end-2)), summarymat(depthrange <= rundepth(end) & depthrange >= rundepth(end-2) , 1), 1);
@@ -20,8 +20,6 @@ topanchpdf = {[[topanchage-3*topancherr:1:topanchage+3*topancherr]' topanchpdf']
 
 % prep input for second run
 rundepth = [topanchdepth; rundepth; botanchdepth];
-rundepth1 = [topanchdepth; rundepth1; botanchdepth];
-rundepth2 = [topanchdepth; rundepth2; botanchdepth];
 rundepthpdf(2:end+1,:) = rundepthpdf(1:end,:);
 rundepthpdf(1,:) = topdepthpdf;
 rundepthpdf(end+1,:) = botdepthpdf;

@@ -1,14 +1,12 @@
-function [medians, p68_2, p95_4, probtoplot, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle] = usmakepdfs(depth, depth1, depth2, age, ageerr, calcurve, resage, reserr, dateboot, depthcombine)
+function [medians, p68_2, p95_4, probtoplot, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle] = usmakepdfs(depth, depth1, depth2, age, ageerr, dateboot, depthcombine)
 
-yeartype='Cal BP'; % for matcal
-
-%---CREATE DEPTH PDFs
+%---CREATE Age PDFs - for now the only case that will be used is uniform probability
 
 depthpdf = cell(length(depth1),1);
 for i = 1:length(depth1)
 	if depth2(i) > depth1(i) % standard core depth interval --> equal probability
 		depthpdf{i}(:,1) = linspace(depth1(i), depth2(i), 10^4);
-		depthpdf{i}(:,2) = ones(size(linspace(depth1(i), depth2(i), 10^4)));
+		depthpdf{i}(:,2) = ones(size(linspace(depth1(i), depth2(i), 10^4))) / 10^4;
 	elseif depth1(i) == depth2(i) % no depth error given --> no uncertainty
 		depthpdf{i}(1,1) = depth(i);
 		depthpdf{i}(1,2) = 1;
@@ -18,7 +16,7 @@ for i = 1:length(depth1)
 	end
 end
 
-%---CREATE CAL AGE PDFs
+%---CREATE data PDFs - for now will be uniform because no data error is passsed to this function
 
 medians = NaN(size(age,1),1);
 
@@ -28,43 +26,25 @@ probtoplot = cell(1,size(age,1));
 prob2sig = cell(1,size(age,1));
 
 for j = 1:size(age,1)
-
-	if strcmpi(calcurve{j},'none') == 1 % create dists for calendar ages
-		
-		if ageerr(j) > 0 % norm dist
-			pdfrng = age(j)-4*ageerr(j):age(j)+4*ageerr(j);
-			prob_temp = normpdf(pdfrng,age(j),ageerr(j));
-			prob_temp = [pdfrng' prob_temp'];
-			p68_2{j} = [age(j)+1*ageerr(j), age(j)-1*ageerr(j), erf(1/sqrt(2))];
-			p95_4{j} = [age(j)+2*ageerr(j), age(j)-2*ageerr(j), erf(2/sqrt(2))];
-			probtoplot{j} = prob_temp(prob_temp(:,2)/max(prob_temp(:,2)) > 0.001, :); % trim tails
-			prob2sig{j} = prob_temp(prob_temp(:,1)<=p95_4{j}(1,1) & prob_temp(:,1)>=p95_4{j}(1,2),:);
-		elseif ageerr(j) == 0 %uni dist
-			p68_2{j} = NaN;
-			p95_4{j} = NaN;
-			prob_temp = [age(j) 1];
-			prob2sig{j} = [age(j) 1];
-			probtoplot{j} = [age(j) 1];
-		end
-		
-	else  % create calibrated PDFs for 14C ages
-		[p95_4{j},p68_2{j},prob_temp] = udmatcal(age(j),ageerr(j),calcurve{j},yeartype,'resage',resage(j),'reserr',reserr(j),'plot',0);
-		p95_4=flipud(p95_4);
-		%take only 95.4% range(s)
-		prob2sig_temp = [];
-		for k=1:size(p95_4{j},1) % possible to have multiple 95.4 intervals
-			prob2sig_temp = [prob2sig_temp; prob_temp(prob_temp(:,1)<=p95_4{j}(k,1) & prob_temp(:,1)>=p95_4{j}(k,2),:)];
-		end
-		prob2sig{j} = sortrows(prob2sig_temp,1);
+	if ageerr(j) > 0 % norm dist
+		pdfrng = age(j)-4*ageerr(j):age(j)+4*ageerr(j);
+		prob_temp = normpdf(pdfrng,age(j),ageerr(j));
+		prob_temp = [pdfrng' prob_temp'];
+		p68_2{j} = [age(j)+1*ageerr(j), age(j)-1*ageerr(j), erf(1/sqrt(2))];
+		p95_4{j} = [age(j)+2*ageerr(j), age(j)-2*ageerr(j), erf(2/sqrt(2))];
 		probtoplot{j} = prob_temp(prob_temp(:,2)/max(prob_temp(:,2)) > 0.001, :); % trim tails
-		
+		prob2sig{j} = prob_temp(prob_temp(:,1)<=p95_4{j}(1,1) & prob_temp(:,1)>=p95_4{j}(1,2),:);
+	elseif ageerr(j) == 0 %uni dist
+		p68_2{j} = NaN;
+		p95_4{j} = NaN;
+		prob_temp = [age(j) 1];
+		prob2sig{j} = [age(j) 1];
+		probtoplot{j} = [age(j) 1];
 	end
-	
+
 	% get median age
 	[~, median_ind] = min(abs( cumsum(prob_temp(:,2)) - 0.5 ));
 	medians(j) = prob_temp(median_ind,1);
-
-	
 end
 
 %---COMBINE AGE PDFs with EXACT SAME DEPTH INTERVAL
@@ -81,6 +61,10 @@ runprob2sig = prob2sig(uni);
 runboot = dateboot(uni);
 runncaldepth = length(rundepth);
 usrunshuffle = 0;
+
+if sanity1 ~= sanity2
+	error('I was annoyed that these two variables were not used')
+end
 
 % for each date with multiple dates, combine their probtoplot and then do HPD, then calculate prob2 from that
 if depthcombine == 1 && length(depth) > length(rundepth)

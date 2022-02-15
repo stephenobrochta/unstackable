@@ -1,51 +1,73 @@
-function [datelabel, depth1, depth2, depth, age, ageerr, datetype, calcurve, resage, reserr, dateboot] = usgetdata(inputfile)
+function [datelabel, depth1, depth2, depth, age, ageerr, proxy_str, dateboot] = usgetdata(proxy,files,scenario)
 
-File = fopen(inputfile);
-Contents = textscan(File,'%s %f %f %f %f %s %s %f %f %s','headerlines',1,'delimiter','\t');
-fclose(File);
-datelabel = Contents{1};
-depth1 = Contents{2};
-depth2 = Contents{3};
-depth = NaN(size(depth1));
-age = Contents{4};
-ageerr = Contents{5};
-datetype = Contents{6};
-calcurve = Contents{7};
-resage = Contents{8};
-resage(isnan(resage)==1) = 0;
-reserr = Contents{9};
-reserr(isnan(reserr)==1) = 0;
-dateboot = Contents{10};
-dateboot = strncmpi(dateboot,'y',1); % convert yes/no to 1/0
+datapath = '/Data-with-age/26-Aug-2021 11.08.41 n10000 x0.1 b30/';
+datafiles = dir([datapath '*.txt']);
+datafiles = datafiles(contains({datafiles.name},files));
+datafiles = datafiles(contains({datafiles.name},scenario));
+[datacell,dataheader] = deal(cell(size(datafiles)));
+s = nan(numel(datafiles),2);
 
-% check for trailing NaNs (artefact of Micros**t Excel)
-while isnan(age(end)) == 1
-	datelabel = datelabel(1:end-1);
-	depth1 = depth1(1:end-1);
-	depth2 = depth2(1:end-1);
-	age = age(1:end-1);
-	ageerr = ageerr(1:end-1);
-	datetype = datetype(1:end-1);
-	calcurve = calcurve(1:end-1);
-	resage = resage(1:end-1);
-	reserr = reserr(1:end-1);
-	dateboot = dateboot(1:end-1);
-	depth = depth(1:end-1);	
+% check that the strings produced unique hits
+if numel(datafiles) ~= numel(files)
+	error([[files{:}] ' were specified but ' [datafiles.name] ' were found'])
 end
 
-% Find mean depth, identify type of depth input
-for i = 1:length(depth1)
-	if depth2(i) > depth1(i) % a standard core depth interval
-		depth(i) = (depth1(i) + depth2(i))/2;
-	elseif isnan(depth2(i)) == 1 % user input NaN as depth2, assume 1 cm slice
-		depth2(i) = depth1(i)+1;
-		depth(i) = (depth1(i) + depth2(i))/2;
-	elseif depth2(i) == depth1(i) % user set depth1 and depth2 the same
-		depth(i) = depth1(i);
-	elseif depth2(i) < depth1(i) % depth1 is mean depth, depth2 is p/m depth error
-		depth(i) = depth1(i);
+% read in the data
+for i = 1:numel(datacell)
+	datacell{i} = fileread([datafiles(i).folder '/' datafiles(i).name]);
+	datacell{i} = splitlines(datacell{i});
+	
+	% check for empty rows at the bottom
+	lastrow = datacell{i}(end,:);
+	while isempty(lastrow{:})
+		datacell{i}(end,:) = [];
+		lastrow = datacell{i}(end,:);
 	end
+
+	% get the header to lookup against proxy
+	dataheader{i} = strsplit(char(datacell{i}(1,:)));
+
+	% convert to a matrix
+	datacell{i} = cell2mat(cellfun(@str2num,datacell{i}(2:end,:),'UniformOutput',false));
+
+	% make 1sig lo, median, 1 sig hi
+	indexage = contains(dataheader{i},'age') & contains(dataheader{i},'med') | contains(dataheader{i},'mean') | contains(dataheader{i},'ave');
+	index1sig = contains(dataheader{i},'age') & contains(dataheader{i},'68') | contains(dataheader{i},'1');
+	index = logical(sum([indexage; index1sig]));
+	age = datacell{i}(:,index);
+	[~,ind] = sort(age(1,:));
+	age = age(:,ind);
+
+	% get the proxy data
+	indexproxy = contains(dataheader{i},proxy);
+	proxydata = datacell{i}(:,indexproxy);
+	
+	% put back in cell
+	datacell{i} = age;
+	datacell{i}(:,4) = proxydata;
+	s(i) = size(age,1);
 end
+
+[depth1,depth2,depth,age,ageerr,dateboot] = deal(ones(sum(s(:,1)),1));
+datelabel = cell(sum(s(:,1)),1);
+startindex = 1;
+s(:,2) = cumsum(s(:,1));
+
+for i = 1:numel(datacell)
+	depth1(startindex:s(i,2)) = datacell{i}(:,1);
+	depth(startindex:s(i,2)) = datacell{i}(:,2);
+	depth2(startindex:s(i,2)) = datacell{i}(:,3);
+	age(startindex:s(i,2)) = datacell{i}(:,4);
+	[datelabel{startindex:s(i,2)}] = deal(strrep(datafiles(i).name,'.txt',''));
+	startindex = startindex + s(i,1);
+end
+
+
+% easiest method for now is use use the 1 sigma as depth1 and depth2 and set ageerr to 0
+% can also try my method ofr converting age error to proxy error
+% can also create a 1 sigma error from the average difference from mean
+% get bryan's opinion
+ageerr = ageerr * 0;
 
 % Sort by depth
 [~,ind] = sort(depth);
@@ -55,11 +77,24 @@ depth2 = depth2(ind);
 depth = depth(ind);
 age = age(ind);
 ageerr = ageerr(ind);
-datetype = datetype(ind);
-calcurve = calcurve(ind);
-resage = resage(ind);
-reserr = reserr(ind);
 dateboot = logical(dateboot(ind));
 
+% Unlike undatable, it is possibl to have NaNs so remove
+index1 = isnan(age); % could be no data value
+index2 = isnan(depth); % could be out of range of age model
+index = sum([index1 index2],2) > 0;
+depth1(index) = [];
+depth2(index) = [];
+depth(index) = [];
+age(index) = [];
+ageerr(index) = [];
+dateboot(index) = [];
+
+legendlookup = fileread('private/Codes legend.txt');
+legendlookup = splitlines(legendlookup);
+index = contains(legendlookup,proxy);
+proxy_str = legendlookup{index}(10:end);
+index = strfind(proxy_str,' ');
+proxy_str(index:end) = [];
 
 end %  end function

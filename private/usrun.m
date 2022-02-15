@@ -1,17 +1,17 @@
-function [agedepmat] = usrun(nsim, bootpc, xfactor, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle, allowreversal)
+function [agedepmat] = usrun(nsim, bootpc, xfactor, rundepth, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle)
 
 % 1.0 ------- Sample age and depth PDFs and put them in agedepmat
 % create agedepmat. col1 = age, col2 = depth
 
 agedepmat = NaN(runncaldepth,2,nsim); % space for intermediate points will be added in step 4.0
 for i = 1:length(rundepth)
-	% age
+	% proxy
 	if size(runprob2sig{i},1) > 1
 		agedepmat(i,1,:) = randsample(runprob2sig{i}(:,1),nsim,true,runprob2sig{i}(:,2));
 	else
 		agedepmat(i,1,:) = repmat(runprob2sig{i}(:,1),1,nsim);
 	end
-	% depth
+	% age
 	if size(rundepthpdf{i},1) > 1
 		agedepmat(i,2,:) = randsample(rundepthpdf{i}(:,1),nsim,true,rundepthpdf{i}(:,2));
 	else
@@ -38,9 +38,6 @@ if sum(runboot) > 0 && bootpc > 0
 	% 	disp(' ')
 end
 
-
-% 3.0 ------- Kick out reversals
-
 if usrunshuffle == 1 % usrunshuffle is set in usmakepdfs
 	% shuffle all agedepmat rows
 	shufind = NaN(size(agedepmat,1),1,nsim);
@@ -64,66 +61,8 @@ clear rowind
 agedepmat = agedepmat(linind);
 clear linind
 
-
-% age-depth reversal/repeat removal script
 agedepmat = flipdim(agedepmat,1); % working from bottom to top, in direction of sedimentation
-workingmat = agedepmat; 
-diffmat = workingmat(2:end,:,:)-workingmat(1:end-1,:,:);
-if allowreversal == 0 % --> remove reversals and repeats
-	while numel(find(diffmat(:,1,:)>=0)) + numel(find(diffmat(:,2,:)>=0)) > 0	
-		% find age and depth reversals & repeats
-		indr = find(diffmat>=0);
-		[irows,icols,iters] = ind2sub(size(diffmat),indr);
-		% NaN the age and depth values for the age reversals/repeats
-		if isempty(icols(icols==1)) == 0
-			ind = sub2ind(size(workingmat),[irows(icols==1)+1 irows(icols==1)+1],[icols(icols==1) icols(icols==1)+1],[iters(icols==1) iters(icols==1)]);
-			workingmat(ind) = NaN;
-		end
-		% NaN the age and depth values for the depth reversals/repeats
-		if isempty(icols(icols==2)) == 0
-			ind = sub2ind(size(workingmat),[irows(icols==2)+1 irows(icols==2)+1],[icols(icols==2)-1 icols(icols==2)],[iters(icols==2) iters(icols==2)]);
-			workingmat(ind) = NaN;
-		end
-		% send the NaNs of 3d matrix to the bottom of 2nd dimension without sorting the other stuff
-		% https://fr.mathworks.com/matlabcentral/answers/386380-move-all-nan-to-end-of-matrix-columns
-		[~,idr] = sort(isnan(workingmat),1);
-		S = size(workingmat);
-		[~,id2,id3] = ndgrid(1:S(1),1:S(2),1:S(3));
-		workingmat = workingmat(sub2ind(S,idr,id2,id3));
-		% calculate new diffmat for next while loop
-		diffmat = workingmat(2:end,:,:)-workingmat(1:end-1,:,:);
-	end
-elseif allowreversal == 1 % --> only remove repeats
-	while numel(find(diffmat(:,1,:)==0)) + numel(find(diffmat(:,2,:)==0)) > 0
-		% find age and depth repeats
-		indr = find(diffmat==0);
-		[irows,icols,iters] = ind2sub(size(diffmat),indr);
-		% NaN the age and depth values for the age repeats
-		if isempty(icols(icols==1)) == 0
-			ind = sub2ind(size(workingmat),[irows(icols==1)+1 irows(icols==1)+1],[icols(icols==1) icols(icols==1)+1],[iters(icols==1) iters(icols==1)]);
-			workingmat(ind) = NaN;
-		end
-		% NaN the age and depth values for the depth repeats
-		if isempty(icols(icols==2)) == 0
-			ind = sub2ind(size(workingmat),[irows(icols==2)+1 irows(icols==2)+1],[icols(icols==2)-1 icols(icols==2)],[iters(icols==2) iters(icols==2)]);
-			workingmat(ind) = NaN;
-		end
-		% send the NaNs of 3d matrix to the bottom of 2nd dimension without sorting the other stuff
-		% https://fr.mathworks.com/matlabcentral/answers/386380-move-all-nan-to-end-of-matrix-columns
-		[~,idr] = sort(isnan(workingmat),1);
-		S = size(workingmat);
-		[~,id2,id3] = ndgrid(1:S(1),1:S(2),1:S(3));
-		workingmat = workingmat(sub2ind(S,idr,id2,id3));
-		% calculate new diffmat for next while loop
-		diffmat = workingmat(2:end,:,:)-workingmat(1:end-1,:,:);
-	end
-end
-agedepmat = workingmat;
-clear workingmat
-
-
-% 4.0 ------ Insert intermediate points (sed rate uncertainty)
-% disp('Calculating sedimentation rate uncertainty')
+% 3.0 ------ Insert intermediate points (sed rate uncertainty)
 
 intmat = NaN(size(agedepmat,1)-1,2,nsim);
 for i = 1:size(intmat,1)
@@ -131,13 +70,8 @@ for i = 1:size(intmat,1)
 	for j = 1:2 % 1 = age, 2 = depth
 		% calc gaussian intpoints for all nsims for this age or depth pair
 		% fully vectorised way that is not possible using normpdf and randsample
-		if allowreversal == 0
-			adtop = agedepmat(i+1,j,:); % upper bounds
-			adbot = agedepmat(i,j,:); % lower bounds
-		elseif allowreversal == 1
-			adtop = min([agedepmat(i+1,j,:); agedepmat(i,j,:)],[],1,'includenan');
-			adbot = max([agedepmat(i+1,j,:); agedepmat(i,j,:)],[],1,'includenan');
-		end
+		adtop = min([agedepmat(i+1,j,:); agedepmat(i,j,:)],[],1,'includenan');
+		adbot = max([agedepmat(i+1,j,:); agedepmat(i,j,:)],[],1,'includenan');
 		meanmat = (adtop+adbot)/2; % mid points
 		diffmat = abs(adtop-adbot); % intervals
 		normmat = randn(size(meanmat)); % normal randoms (mu = 0, sig = 1)

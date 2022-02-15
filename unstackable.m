@@ -1,6 +1,15 @@
-function [udoutput, shadingmat, sarsummarymat, sarshadingmat] = unstackable(inputfile,nsim,xfactor,bootpc,varargin)
+function [udoutput, shadingmat, sarsummarymat, sarshadingmat] = unstackable(proxy,files,nsim,xfactor,bootpc,varargin)
 % [udoutput, shadingmat, sarsummarymat, sarshadingmat] = undatable(inputfile,nsim,xfactor,bootpc)
 %
+% This is a modified version of undatable designed to stack
+% data. It is essentially undatable with reversals allowed.
+% A high value for bootpc will produce a smooth line with high
+% uncertainty. A larger value of xfactor will increase error
+% in interals that lack data, which probably won't be the case
+% for standard usage. Data should be formatted following the
+% PARIS database.
+% https://zenodo.org/record/5115993#.Ygs2gS-l2XE
+% 
 % "Undatable" age-depth modelling software.
 % Version 1.2 (2020-07-01). For deailed description, see:
 % Lougheed, B. C. and Obrochta, S. P. (2019),
@@ -12,12 +21,14 @@ function [udoutput, shadingmat, sarsummarymat, sarshadingmat] = unstackable(inpu
 % REQUIRED INPUT VARIABLES
 % ================================
 %
-% inputfile = string with location of Undatable input text
-% file (e.g., 'inputfile.txt')
+% proxy = string name of data column to stack
+% 
+% files = cell of filenames or unique strings to identify files
 %
 % nsim = number of iterations to run (e.g. 10^3, 10^4, 10^5)
 %
 % xfactor = Gaussian SAR uncertainty factor (e.g. 0.1, 0.2, etc)
+% if data are generally continuously and densely sampled, set to 0.
 %
 % bootpc = Percent of age-depth constraints to bootstrap for
 % each age-depth model iteration (e.g. 10, 20, 40, etc.).
@@ -90,21 +101,6 @@ function [udoutput, shadingmat, sarsummarymat, sarshadingmat] = unstackable(inpu
 % you are experiencing errors with plot2raster, which is untested
 % on older versions of matlab.
 % 
-% 'sar': Calculate sediment accumulation rate
-% (e.g.: 'sar', 1) Default = 0.
-% 0 = Calculate SAR based on median age. Returns an output
-% matrix called sarsummarymat containing depth in column 1,
-% age in column 2 and SAR in column 3.
-% 1 = Calculate 99 percentiles of SAR based on the accumulation
-% model. Returns a matrix called sarsummarymat, which is the same
-% as udoutput but with SAR instead of age. Also returns a matrix
-% called sarshadingmat, which is the same as shadingmat but with
-% SAR percentiles instead of age percentiles.
-%
-% 'plotsar': Create two panel plot with sediment accumulation rate
-% plotted below age model.
-% 0 = do not plot, 1 = plot, default = 0
-% 
 % 'debug' = Plot all age-depth model points used to make cloud
 % 1 = Yes, 0 = No. (e.g.: 'debug',1') default = 0.
 
@@ -120,13 +116,16 @@ defaultsavebigmat = 0;
 defaultdebug = 0;
 defaultwritedir = '';
 defaultguimode = 0;
-defaultallowreversal = 1;
 defaultrun1nsim = 2000;
 defaultsar = 0;
 defaultvcloud = 0;
-defaultplotsar = 0;
 defaultdt = [];
 [defaultminproxy,defaultmaxproxy] = deal([]);
+scenario = 'SCEN1';
+rangeage = [];
+makeanimation = 0;
+SaveName = '';
+Location = '';
 
 addParameter(p,'combine',defaultcombine,@isnumeric);
 addParameter(p,'plotme',defaultplotme,@isnumeric);
@@ -136,14 +135,17 @@ addParameter(p,'savebigmat',defaultsavebigmat,@isnumeric);
 addParameter(p,'debug',defaultdebug,@isnumeric);
 addParameter(p,'writedir',defaultwritedir,@isstr);
 addParameter(p,'guimode',defaultguimode,@isnumeric);
-addParameter(p,'allowreversal',defaultallowreversal,@isnumeric);
 addParameter(p,'run1nsim',defaultrun1nsim,@isnumeric);
 addParameter(p,'sar',defaultsar,@isnumeric);
 addParameter(p,'vcloud',defaultvcloud,@isnumeric);
-addParameter(p,'plotsar',defaultplotsar,@isnumeric);
 addParameter(p,'dt',defaultdt,@isnumeric);
 addParameter(p,'minproxy',defaultminproxy,@isnumeric);
 addParameter(p,'maxproxy',defaultmaxproxy,@isnumeric);
+addParameter(p,'scenario',scenario,@isstr);
+addParameter(p,'agerange',rangeage,@isnumeric);
+addParameter(p,'movie',makeanimation,@isnumeric);
+addParameter(p,'savename',SaveName,@isstr);
+addParameter(p,'location',Location,@isstr);
 
 parse(p,varargin{:});
 depthcombine=p.Results.combine;
@@ -154,14 +156,23 @@ savebigmat = p.Results.savebigmat;
 debugme = p.Results.debug;
 writedir = p.Results.writedir;
 guimode = p.Results.guimode;
-allowreversal = p.Results.allowreversal;
 run1nsim = p.Results.run1nsim;
 sar = p.Results.sar;
 vcloud = p.Results.vcloud;
-plotsar = p.Results.plotsar;
 dt = p.Results.dt;
 minproxy = p.Results.minproxy;
 maxproxy = p.Results.maxproxy;
+scenario = p.Results.scenario;
+rangeage = p.Results.agerange;
+makeanimation = p.Results.movie;
+SaveName = p.Results.savename;
+Location = p.Results.location;
+if isempty(Location)
+	Location = [files{:}];
+end
+if isempty(SaveName)
+	SaveName = [Location '_' proxy '_' scenario];
+end
 
 % append / to writedir in case user forgot
 if isempty(writedir) == 0
@@ -178,10 +189,10 @@ elseif bootpc >= 100
 end
 
 %---GET AND SORT INPUT DATA
-[datelabel, depth1, depth2, depth, age, ageerr, datetype, calcurve, resage, reserr, dateboot] = usgetdata(inputfile);
+[datelabel, depth1, depth2, depth, age, ageerr, proxy_str, dateboot] = usgetdata(proxy, files, scenario);
 
 %---MAKE AGE AND DEPTH PDFs
-[medians, p68_2, p95_4, probtoplot, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle] = usmakepdfs(depth, depth1, depth2, age, ageerr, calcurve, resage, reserr, dateboot, depthcombine);
+[medians, p68_2, p95_4, probtoplot, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle] = usmakepdfs(depth, depth1, depth2, age, ageerr, dateboot, depthcombine);
 
 %---RUN THE AGE DEPTH LOOPS
 if mean(depth2 - depth1) ~= 0
@@ -193,24 +204,24 @@ else
 end
 
 % run age depth loop for the first time (without anchors)
-agedepmat = usrun(run1nsim, bootpc, xfactor, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle, allowreversal);
+agedepmat = usrun(nsim, bootpc, xfactor, rundepth, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle);
 
 % summarise the data
-interpinterval = 1;
+interpinterval = 100;
 depthstart = depth(1);
 depthend = depth(end);
-[summarymat, shadingmat, depthrange, sarsummarymat, sarshadingmat] = ussummary(depthstart, depthend, run1nsim, agedepmat, interpinterval, inputfile, writedir, bootpc, xfactor, depthcombine, sar, savebigmat);
+[summarymat, shadingmat, depthrange] = ussummary(depthstart, depthend, run1nsim, agedepmat, interpinterval, writedir, bootpc, xfactor, depthcombine, savebigmat, proxy, SaveName);
 
 if mean(depth2 - depth1) ~= 0
 	
 	% make anchors based on first run
-	[rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth] = usanchors(depthrange, depth, depth1, depth2, summarymat, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot);
+	[rundepth, rundepthpdf, runprob2sig, runboot, runncaldepth] = usanchors(depthrange, summarymat, rundepth, rundepthpdf, runprob2sig, runboot);
 	
 	% run age depth loop for the second time with anchors
-	agedepmat = usrun(nsim, bootpc, xfactor, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle, allowreversal);
+	agedepmat = usrun(nsim, bootpc, xfactor, rundepth, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle);
 	
 	% summarise the data
-	[summarymat, shadingmat, depthrange, sarsummarymat, sarshadingmat] = ussummary(depthstart, depthend, nsim, agedepmat, interpinterval, inputfile, writedir, bootpc, xfactor, depthcombine, sar, savebigmat);
+	[summarymat, shadingmat, depthrange] = ussummary(depthstart, depthend, nsim, agedepmat, interpinterval, writedir, bootpc, xfactor, depthcombine, savebigmat, proxy, SaveName);
 end
 
 if sum(isnan(agedepmat(:,1,:))) == numel(agedepmat(:,1,:))
@@ -225,8 +236,7 @@ if savebigmat == 1
 end
 
 if savemat == 1 && guimode == 0
-	[~,writename,~] = fileparts(inputfile);
-	save([writedir,writename,'.mat'])
+	save([writedir,SaveName,'.mat'])
 elseif guimode == 1
 	save([writedir,'guitemp.mat'])
 end
