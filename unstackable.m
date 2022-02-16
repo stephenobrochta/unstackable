@@ -119,13 +119,14 @@ defaultguimode = 0;
 defaultrun1nsim = 2000;
 defaultsar = 0;
 defaultvcloud = 0;
-defaultdt = [];
+defaultdt = 100;
 [defaultminproxy,defaultmaxproxy] = deal([]);
 scenario = 'SCEN1';
 rangeage = [];
 makeanimation = 0;
 SaveName = '';
 Location = '';
+datapath = 'Data-with-age/26-Aug-2021 11.08.41 n10000 x0.1 b30/';
 
 addParameter(p,'combine',defaultcombine,@isnumeric);
 addParameter(p,'plotme',defaultplotme,@isnumeric);
@@ -146,6 +147,7 @@ addParameter(p,'agerange',rangeage,@isnumeric);
 addParameter(p,'movie',makeanimation,@isnumeric);
 addParameter(p,'savename',SaveName,@isstr);
 addParameter(p,'location',Location,@isstr);
+addParameter(p,'datapath',datapath,@isstr);
 
 parse(p,varargin{:});
 depthcombine=p.Results.combine;
@@ -167,6 +169,7 @@ rangeage = p.Results.agerange;
 makeanimation = p.Results.movie;
 SaveName = p.Results.savename;
 Location = p.Results.location;
+datapath = p.Results.datapath;
 if isempty(Location)
 	Location = [files{:}];
 end
@@ -189,10 +192,10 @@ elseif bootpc >= 100
 end
 
 %---GET AND SORT INPUT DATA
-[datelabel, depth1, depth2, depth, age, ageerr, proxy_str, dateboot] = usgetdata(proxy, files, scenario);
+[datelabel, depth1, depth2, depth, age, ageerr, proxy_str, dateboot] = usgetdata(proxy, files, scenario,datapath);
 
 %---MAKE AGE AND DEPTH PDFs
-[medians, p68_2, p95_4, probtoplot, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle] = usmakepdfs(depth, depth1, depth2, age, ageerr, dateboot, depthcombine);
+[medians, p68_2, p95_4, probtoplot, rundepth, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle] = usmakepdfs(depth, depth1, depth2, age, ageerr, dateboot, depthcombine);
 
 %---RUN THE AGE DEPTH LOOPS
 if mean(depth2 - depth1) ~= 0
@@ -207,10 +210,9 @@ end
 agedepmat = usrun(nsim, bootpc, xfactor, rundepth, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle);
 
 % summarise the data
-interpinterval = 100;
 depthstart = depth(1);
 depthend = depth(end);
-[summarymat, shadingmat, depthrange] = ussummary(depthstart, depthend, run1nsim, agedepmat, interpinterval, writedir, bootpc, xfactor, depthcombine, savebigmat, proxy, SaveName);
+[summarymat, shadingmat, depthrange] = ussummary(depthstart, depthend, run1nsim, agedepmat, dt, writedir, bootpc, xfactor, depthcombine, savebigmat, proxy, SaveName);
 
 if mean(depth2 - depth1) ~= 0
 	
@@ -221,7 +223,7 @@ if mean(depth2 - depth1) ~= 0
 	agedepmat = usrun(nsim, bootpc, xfactor, rundepth, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle);
 	
 	% summarise the data
-	[summarymat, shadingmat, depthrange] = ussummary(depthstart, depthend, nsim, agedepmat, interpinterval, writedir, bootpc, xfactor, depthcombine, savebigmat, proxy, SaveName);
+	[summarymat, shadingmat, depthrange] = ussummary(depthstart, depthend, nsim, agedepmat, dt, writedir, bootpc, xfactor, depthcombine, savebigmat, proxy, SaveName);
 end
 
 if sum(isnan(agedepmat(:,1,:))) == numel(agedepmat(:,1,:))
