@@ -1,6 +1,5 @@
-function [datelabel, depth1, depth2, depth, age, ageerr, proxy_str, dateboot] = usgetdata(proxy,files,scenario)
+function [datelabel, depth1, depth2, depth, age, ageerr, proxy_str, dateboot] = usgetdata(proxy,files,scenario,datapath)
 
-datapath = '/Data-with-age/26-Aug-2021 11.08.41 n10000 x0.1 b30/';
 datafiles = dir([datapath '*.txt']);
 datafiles = datafiles(contains({datafiles.name},files));
 datafiles = datafiles(contains({datafiles.name},scenario));
