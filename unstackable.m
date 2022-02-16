@@ -127,6 +127,7 @@ makeanimation = 0;
 SaveName = '';
 Location = '';
 datapath = 'Data-with-age/26-Aug-2021 11.08.41 n10000 x0.1 b30/';
+plotraw = 1;
 
 addParameter(p,'combine',defaultcombine,@isnumeric);
 addParameter(p,'plotme',defaultplotme,@isnumeric);

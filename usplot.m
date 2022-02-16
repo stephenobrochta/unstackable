@@ -37,8 +37,16 @@ end
 % plot(depthrange,summarymat(:,3)/1000,'b--') % 68.2 range
 % plot(depthrange,summarymat(:,4)/1000,'b--') % 68.2 range
 
-plot(depthrange/1000,summarymat(:,1),'r')
+% plot the raw data
+if plotraw == 1
+	for i = 1:numel(files)
+		index = contains(datelabel,files{i});
+		plot(depth(index) / 1000,age(index),'+','markersize',2)
+	end
+end
 
+% median fit on top
+plot(depthrange/1000,summarymat(:,1),'r')
 set(h_age,'ydir','normal','tickdir','out','box','on')
 % reverse Y axis for NPS and d18O
 if contains(proxy,'NPS') || contains(proxy,'OX')
@@ -63,7 +71,7 @@ title(strrep(Title,'_','\_'));
 % plot all the agedepth runs (debug mode)
 if debugme == 1
 	for i = 1:size(agedepmat,3)
-		plot(agedepmat(:,1,i)/1000,agedepmat(:,2,i),'r.','markersize',2)
+		plot(agedepmat(:,1,i)/1000,agedepmat(:,2,i),'r.','markersize',5)
 		hold on
 	end
 end
@@ -76,8 +84,27 @@ str = ['xfactor = ',num2str(xfactor,'%.2g'),newline,'bootpc = ',num2str(bootpc,'
 settingtext = annotation('textbox',get(h_age,'position'),'string',str);
 set(settingtext,'linestyle','none','horizontalalignment','right','verticalalignment','top')
 
+% legend
+if plotraw == 1
+	H = cell(numel(files) + 1,1);
+	Positions = nan(numel(H),2);
+	Legend = ['Median',files];
+	chi = get(h_age,'children');
+	colors = [1,0,0; get(h_age,'colororder')];
+	for i = 1:numel(H)
+		H{i} = annotation('textbox','string',Legend{i},'color',colors(i,:),'linestyle','none','verticalalign','top','horizontalalign','center');
+	end
+end
 % set all fonts
 set(findall(gcf,'-property','FontSize'),'FontSize',textsize)
+
+leftPosition = axesl;
+for i = 1:numel(H)
+	tempPositon = H{i}.Position;
+	Positions(i,:) = tempPositon(3:4);
+	set(H{i},'position',[leftPosition, axesb + axesh - Positions(i,2), Positions(i,1), Positions(i,2)])
+	leftPosition = leftPosition + Positions(i,1);
+end
 
 % print
 if printme == 1

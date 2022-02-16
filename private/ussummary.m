@@ -68,7 +68,7 @@ elseif depthcombine == 0
 	comtag = 'No'; 
 end
 
-fid_output = fopen(SaveName,'w');
+fid_output = fopen([SaveName '_stack.txt'],'w');
 fprintf(fid_output,'%s',['Undatable run on ',datestr(now,31),'. nsim=',num2str(nsim),' bootpc=',num2str(bootpc,'%.2g'),' xfactor=',num2str(xfactor,'%.2g'),' combine=',comtag]);
 fprintf(fid_output,'\r\n%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s','Depth','Median age','Mean age','95.4% age','68.2% age','68.2% age','95.4% age');
 for i = 1:size(depthrange,1)

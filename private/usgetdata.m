@@ -88,6 +88,7 @@ depth(index) = [];
 age(index) = [];
 ageerr(index) = [];
 dateboot(index) = [];
+datelabel(index) = [];
 
 legendlookup = fileread('private/Codes legend.txt');
 legendlookup = splitlines(legendlookup);
