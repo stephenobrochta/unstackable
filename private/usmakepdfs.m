@@ -1,4 +1,4 @@
-function [medians, p68_2, p95_4, probtoplot, rundepth, rundepth1, rundepth2, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle] = usmakepdfs(depth, depth1, depth2, age, ageerr, dateboot, depthcombine)
+function [medians, p68_2, p95_4, probtoplot, rundepth, rundepthpdf, runprob2sig, runboot, runncaldepth, usrunshuffle] = usmakepdfs(depth, depth1, depth2, age, ageerr, dateboot, depthcombine)
 
 %---CREATE Age PDFs - for now the only case that will be used is uniform probability
 
@@ -54,8 +54,6 @@ end
 rundepth = depth(uni);
 sanity1 = length(rundepth);
 sanity2 = length(unique(rundepth)); % sanity1 and sanity2 should always be the same!
-rundepth1 = depth1(uni);
-rundepth2 = depth2(uni);
 rundepthpdf = depthpdf(uni);
 runprob2sig = prob2sig(uni);
 runboot = dateboot(uni);
