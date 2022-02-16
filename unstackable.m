@@ -171,10 +171,21 @@ SaveName = p.Results.savename;
 Location = p.Results.location;
 datapath = p.Results.datapath;
 if isempty(Location)
-	Location = [files{:}];
+	% preallocate a string arrary with extra room for ', '. There's gotta be a better way
+	loc_length = length([files{:}]) + 2 * (length(files) - 1);
+	Location = blanks(loc_length);
+	% starting index
+	j = 1;
+	for i = 1:length(files)
+		% end index of current string
+		k = length(files{i}) + 2 + j - 1;
+		Location(j:k) = [files{i} ', '];
+		j = k + 1;
+	end
 end
 if isempty(SaveName)
-	SaveName = [Location '_' proxy '_' scenario];
+	Title = [Location proxy '_' scenario];
+	SaveName = strrep(Title,', ','_');
 end
 
 % append / to writedir in case user forgot

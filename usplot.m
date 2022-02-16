@@ -1,37 +1,9 @@
-udplotoptions % call udplotoptions.m to workspace
+usplotoptions % call udplotoptions.m to workspace
 
-% plot dimensions in pixels
-figw = 560;
-axesl = 50;
-axesw = 475;
-figh = 460;
-axesb = 46;
-axesh = 400;
-
-
-% convert pixel dimensions to relative units so plot can be resized
-axesl = axesl / figw;
-axesb = axesb ./ figh;
-axesw = axesw / figw;
-axesh = axesh ./ figh;
-
-% center figure on primary monitor
-scrnsze = get(0,'monitorPositions');
-if size(scrnsze,1) > 1
-	i = find(scrnsze(:,1) == 1);
-else
-	i = 1;
-end
-figl = (scrnsze(i,3)/2) - figw / 2;
-figb = (scrnsze(i,4)/2) - figh / 2;
-
-% plot age model
 figure('position',[figl , figb , figw , figh])
-h_age = axes('position',[axesl , axesb(1) , axesw , axesh(1)]);
-hold(gca,'on')
+h_age = axes('position',[axesl , axesb(1) , axesw , axesh]);
+hold(h_age,'on')
 
-			% // ---- paste from here into undatableGUI.m
-% Plot density cloud
 hcloud = gobjects(49,1);
 for i = 1:49
 	
@@ -66,7 +38,12 @@ end
 % plot(depthrange,summarymat(:,4)/1000,'b--') % 68.2 range
 
 plot(depthrange/1000,summarymat(:,1),'r')
-set(gca,'ydir','normal','tickdir','out','fontsize',12,'box','on')
+
+set(h_age,'ydir','normal','tickdir','out','box','on')
+% reverse Y axis for NPS and d18O
+if contains(proxy,'NPS') || contains(proxy,'OX')
+	set(h_age,'ydir','reverse')
+end
 ylabel(proxy_str)
 xlabel(agelabel)
 grid on
@@ -80,16 +57,8 @@ grid on
 % 	end
 % end
 
-set(gca, 'Layer', 'Top')
-
 % title
-if guimode == 0
-	[~,NAME,~] = fileparts(SaveName);
-	NAME = strrep(NAME,'.txt','');
-	NAME = strrep(NAME,'_udinput','');
-	NAME = strrep(NAME,'_','\_');
-	title(NAME);
-end
+title(strrep(Title,'_','\_'));
 
 % plot all the agedepth runs (debug mode)
 if debugme == 1
@@ -100,27 +69,14 @@ if debugme == 1
 end
 
 % set paper size (cm)f
-set(gcf,'PaperUnits','centimeters')
-set(gcf, 'PaperSize',[plotwidth plotheight])
-% put figure in top left of paper
-set(gcf,'PaperPosition',[0 0 plotwidth plotheight])
-% make background white
-set(gcf,'InvertHardcopy','on');
-set(gcf,'color',[1 1 1]);
+set(gcf,'PaperUnits','centimeters','PaperSize',[plotwidth plotheight],'PaperPosition',[0.25 0 plotwidth plotheight] ,'InvertHardcopy','on', 'color',[1 1 1]);
 
-% print the xfactor and bootpc to the bottom left corner
+% print the xfactor and bootpc to the top rightclose corner
 str = ['xfactor = ',num2str(xfactor,'%.2g'),newline,'bootpc = ',num2str(bootpc,'%.2g')];
-settingtext = annotation('textbox',get(gca,'position'),'string',str);
-set(settingtext,'linestyle','none')
-set(settingtext,'horizontalalignment','left')
-set(settingtext,'verticalalignment','bottom')
+settingtext = annotation('textbox',get(h_age,'position'),'string',str);
+set(settingtext,'linestyle','none','horizontalalignment','right','verticalalignment','top')
 
 % set all fonts
-set(findall(gcf,'-property','FontSize'),'FontSize',textsize)
-
-				% ----/// paste to here into undatableGUI.m
-
-% plot sediment accumulation rate
 set(findall(gcf,'-property','FontSize'),'FontSize',textsize)
 
 % print
