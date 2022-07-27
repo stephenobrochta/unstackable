@@ -8,7 +8,7 @@ s = nan(numel(datafiles),2);
 
 % check that the strings produced unique hits
 if numel(datafiles) ~= numel(files)
-	error([[files{:}] ' were specified but ' [datafiles.name] ' were found'])
+	error([[files{:}] ' were specified but ' [datafiles.name] ' were found at ' datapath])
 end
 
 % read in the data
