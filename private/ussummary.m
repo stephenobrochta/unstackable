@@ -69,7 +69,7 @@ elseif depthcombine == 0
 end
 
 fid_output = fopen([SaveName '_stack.txt'],'w');
-fprintf(fid_output,'%s',['Undatable run on ',datestr(now,31),'. nsim=',num2str(nsim),' bootpc=',num2str(bootpc,'%.2g'),' xfactor=',num2str(xfactor,'%.2g'),' combine=',comtag]);
+fprintf(fid_output,'%s',['Unstackable run on ',datestr(now,31),'. nsim=',num2str(nsim),' bootpc=',num2str(bootpc,'%.2g'),' xfactor=',num2str(xfactor,'%.2g'),' combine=',comtag]);
 fprintf(fid_output,'\r\n%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s','Depth','Median age','Mean age','95.4% age','68.2% age','68.2% age','95.4% age');
 for i = 1:size(depthrange,1)
 	fprintf(fid_output,'\r\n%f\t%.0f\t%.0f\t%.0f\t%.0f\t%.0f\t%.0f',depthrange(i),summarymat(i,1),summarymat(i,6),summarymat(i,2),summarymat(i,3),summarymat(i,4),summarymat(i,5));
