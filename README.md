@@ -1,4 +1,4 @@
-# Undatable
+# Unstackable
 
 Data stacking in Matlab.
 
