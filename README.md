@@ -1,6 +1,6 @@
 # Undatable
 
-Data stacking modelling in Matlab.
+Data stacking in Matlab.
 
 Derived from
 
